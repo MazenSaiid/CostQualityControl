@@ -1,0 +1,68 @@
+.dashboard-container {
+  padding: 24px;
+
+  .kpi-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+
+    > * {
+      flex: 1 1 0;
+      min-width: 140px;
+    }
+  }
+
+  .kpi-card {
+    ::ng-deep mat-card-content {
+      display: flex;
+      flex-direction: column;
+      padding: 20px !important;
+    }
+    mat-icon { font-size: 28px; width: 28px; height: 28px; color: #1976d2; margin-bottom: 12px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; color: #1a237e; line-height: 1; }
+    .kpi-label { font-size: 0.72rem; color: #78909c; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  }
+
+  .tables-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .table-card {
+    mat-card-title { font-size: 0.95rem !important; font-weight: 600; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; min-width: 300px; }
+  }
+
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    &.completed { background: #e8f5e9; color: #2e7d32; }
+    &.pending   { background: #fff8e1; color: #f57f17; }
+    &.failed    { background: #ffebee; color: #c62828; }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    .kpi-grid { gap: 12px; margin-bottom: 16px; }
+    .tables-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+    .kpi-card .kpi-value { font-size: 1.5rem; }
+  }
+}
+
+.loading-state {
+  padding: 60px 24px;
+  p { text-align: center; color: #78909c; margin-top: 20px; font-size: 0.9rem; }
+}

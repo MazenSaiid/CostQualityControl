@@ -1,0 +1,121 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h2>Suppliers</h2>
+      <p>Manage supplier records linked to invoices and inventory</p>
+    </div>
+    @if (!showForm) {
+      <button mat-raised-button color="primary" (click)="openAdd()">
+        <mat-icon>add</mat-icon> New Supplier
+      </button>
+    }
+  </div>
+
+  @if (showForm) {
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>{{ editingId ? 'Edit' : 'New' }} Supplier</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form">
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Supplier Name *</mat-label>
+              <input matInput formControlName="name" placeholder="e.g. VIC Trading">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Contact Person</mat-label>
+              <input matInput formControlName="contactPerson">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input matInput formControlName="email" type="email">
+            </mat-form-field>
+          </div>
+          <mat-form-field appearance="outline" class="full-field">
+            <mat-label>Notes</mat-label>
+            <textarea matInput formControlName="notes" rows="2"></textarea>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="cancel()">Cancel</button>
+        <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">Save Supplier</button>
+      </mat-card-actions>
+    </mat-card>
+  }
+
+  <mat-card>
+    <mat-card-content>
+      <div class="table-wrap">
+        <table mat-table [dataSource]="suppliers()" class="full-width">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Supplier Name</th>
+            <td mat-cell *matCellDef="let s"><strong>{{ s.name }}</strong></td>
+          </ng-container>
+          <ng-container matColumnDef="contactPerson">
+            <th mat-header-cell *matHeaderCellDef>Contact Person</th>
+            <td mat-cell *matCellDef="let s">{{ s.contactPerson || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="phone">
+            <th mat-header-cell *matHeaderCellDef>Phone</th>
+            <td mat-cell *matCellDef="let s">{{ s.phone || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let s">{{ s.email || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="notes">
+            <th mat-header-cell *matHeaderCellDef>Notes</th>
+            <td mat-cell *matCellDef="let s" class="notes-cell">{{ s.notes || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="invoiceCount">
+            <th mat-header-cell *matHeaderCellDef>Invoices</th>
+            <td mat-cell *matCellDef="let s">
+              <span class="inv-count" [class.none]="statsFor(s.id).count === 0">
+                {{ statsFor(s.id).count }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="totalInvoiced">
+            <th mat-header-cell *matHeaderCellDef class="num">Total Invoiced</th>
+            <td mat-cell *matCellDef="let s" class="num money">
+              {{ statsFor(s.id).invoiced | number:'1.2-2' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="totalPaid">
+            <th mat-header-cell *matHeaderCellDef class="num">Paid</th>
+            <td mat-cell *matCellDef="let s" class="num paid">
+              {{ statsFor(s.id).paid | number:'1.2-2' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="totalOwed">
+            <th mat-header-cell *matHeaderCellDef class="num">Still Owed</th>
+            <td mat-cell *matCellDef="let s" class="num" [class.owed]="statsFor(s.id).due > 0">
+              {{ statsFor(s.id).due | number:'1.2-2' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let s">
+              <div class="action-btns">
+                <button mat-icon-button color="primary" (click)="openEdit(s)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="delete(s)" matTooltip="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,0 +1,15 @@
+<div class="shell-layout" [class.sidebar-collapsed]="sidebarCollapsed()" [class.mobile-open]="mobileOpen()">
+  <div class="sidebar-overlay" (click)="closeMobileSidebar()"></div>
+  <app-sidebar
+    [collapsed]="sidebarCollapsed()"
+    [class.mobile-overlay]="isMobile()"
+    [class.mobile-hidden]="isMobile() && !mobileOpen()"
+    (navClick)="mobileOpen.set(false)">
+  </app-sidebar>
+  <div class="main-area">
+    <app-header (toggleSidebar)="toggleSidebar()"></app-header>
+    <main class="content-area">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

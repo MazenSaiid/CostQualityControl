@@ -1,0 +1,111 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (primary: mat.$azure-palette, tertiary: mat.$blue-palette),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  color-scheme: light;
+  background-color: #f0f2f5;
+  color: #212121;
+}
+
+app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #90a4ae; }
+
+/* Common utilities */
+.page-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .header-left h2 {
+    margin: 0 0 2px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a237e;
+  }
+  .header-left p { margin: 0; font-size: 0.875rem; color: #78909c; }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  &.passed, &.completed, &.active { background: #e8f5e9; color: #2e7d32; }
+  &.failed, &.inactive { background: #ffebee; color: #c62828; }
+  &.pending { background: #fff8e1; color: #f57f17; }
+}
+
+mat-card {
+  border-radius: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+/* Strip horizontal padding from card content — restored per-card in component SCSS */
+mat-card-content,
+.mat-mdc-card-content {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  display: block !important;
+}
+
+/* Supplier card: restore 16px side padding so blocks breathe same as table-wrap */
+.supplier-card mat-card-content,
+.supplier-card .mat-mdc-card-content {
+  padding: 0 16px 16px !important;
+}
+
+/* Financial report supplier blocks same treatment */
+.section-card mat-card-content,
+.section-card .mat-mdc-card-content {
+  padding: 0 16px 16px !important;
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .page-container { padding: 12px; }
+}

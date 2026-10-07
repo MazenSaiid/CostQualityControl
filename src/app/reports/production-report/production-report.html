@@ -1,0 +1,296 @@
+<div class="production-report">
+  <div class="page-header">
+    <div>
+      <h2>Production Efficiency Report</h2>
+      <p>Yield rates, waste analysis and batch performance</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportExcel()">
+        <mat-icon>table_view</mat-icon> Excel
+      </button>
+      <button mat-stroked-button color="warn" (click)="exportPdf()">
+        <mat-icon>picture_as_pdf</mat-icon> PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Existing KPI cards -->
+  <div class="summary-grid">
+    <mat-card class="summary-card">
+      <mat-icon>precision_manufacturing</mat-icon>
+      <div><span class="val">{{ completedBatches().length }}</span><span class="lbl">Completed Batches</span></div>
+    </mat-card>
+    <mat-card class="summary-card">
+      <mat-icon>inventory</mat-icon>
+      <div><span class="val">{{ totalExpected() }}</span><span class="lbl">Total Expected (kg)</span></div>
+    </mat-card>
+    <mat-card class="summary-card green">
+      <mat-icon>check_circle</mat-icon>
+      <div><span class="val">{{ totalActual() }}</span><span class="lbl">Total Actual (kg)</span></div>
+    </mat-card>
+    <mat-card class="summary-card" [class.green]="avgYield() >= 95" [class.orange]="avgYield() >= 80 && avgYield() < 95" [class.red]="avgYield() < 80">
+      <mat-icon>show_chart</mat-icon>
+      <div><span class="val">{{ avgYield() | number:'1.1-1' }}%</span><span class="lbl">Avg Yield Rate</span></div>
+    </mat-card>
+    <mat-card class="summary-card red">
+      <mat-icon>delete_sweep</mat-icon>
+      <div><span class="val">{{ avgWaste() | number:'1.1-1' }}%</span><span class="lbl">Avg Waste Rate</span></div>
+    </mat-card>
+  </div>
+
+  <!-- Financial & waste KPI cards -->
+  <div class="summary-grid">
+    <mat-card class="summary-card green">
+      <mat-icon>payments</mat-icon>
+      <div><span class="val">{{ totalSellingValue() | number:'1.2-2' }}</span><span class="lbl">Total Selling Value</span></div>
+    </mat-card>
+    <mat-card class="summary-card blue">
+      <mat-icon>account_balance_wallet</mat-icon>
+      <div><span class="val">{{ totalCostValue() | number:'1.2-2' }}</span><span class="lbl">Total Cost Value</span></div>
+    </mat-card>
+    <mat-card class="summary-card purple">
+      <mat-icon>trending_up</mat-icon>
+      <div><span class="val">{{ totalProfit() | number:'1.2-2' }}</span><span class="lbl">Total Profit</span></div>
+    </mat-card>
+    <mat-card class="summary-card teal">
+      <mat-icon>percent</mat-icon>
+      <div><span class="val">{{ avgYield() | number:'1.1-1' }}%</span><span class="lbl">Avg Yield %</span></div>
+    </mat-card>
+    <mat-card class="summary-card orange">
+      <mat-icon>delete_sweep</mat-icon>
+      <div><span class="val">{{ avgWaste() | number:'1.1-1' }}%</span><span class="lbl">Avg Waste %</span></div>
+    </mat-card>
+    <mat-card class="summary-card red">
+      <mat-icon>scale</mat-icon>
+      <div><span class="val">{{ totalWasteKg() | number:'1.2-2' }} kg</span><span class="lbl">Total Waste (kg)</span></div>
+    </mat-card>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Status</span>
+      <div class="chip-group">
+        @for (s of [{v:'all',l:'All'},{v:'completed',l:'Completed'},{v:'pending',l:'Pending'},{v:'failed',l:'Failed'}]; track s.v) {
+          <button class="chip" [class.active]="filterStatus() === s.v" (click)="filterStatus.set(s.v)">{{ s.l }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-group">
+      <span class="filter-label">Product</span>
+      <mat-form-field appearance="outline" class="slim-field">
+        <mat-select [value]="filterProduct()" (selectionChange)="filterProduct.set($event.value)" placeholder="All products">
+          <mat-option [value]="0">All products</mat-option>
+          @for (p of products(); track p.id) {
+            <mat-option [value]="p.id">{{ p.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-group">
+      <span class="filter-label"><mat-icon class="label-icon">calendar_today</mat-icon> Date range</span>
+      <mat-form-field appearance="outline" class="slim-field date-field">
+        <mat-date-range-input [rangePicker]="picker" [max]="maxDate">
+          <input matStartDate placeholder="From" [value]="toDate(filterDateFrom())" (dateChange)="filterDateFrom.set(toIso($event.value))" />
+          <input matEndDate placeholder="To" [value]="toDate(filterDateTo())" (dateChange)="filterDateTo.set(toIso($event.value))" />
+        </mat-date-range-input>
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-date-range-picker #picker></mat-date-range-picker>
+      </mat-form-field>
+    </div>
+
+    <div class="filter-meta">
+      <span class="filter-count">{{ filteredBatches().length }}<span class="total"> / {{ batches().length }}</span> batches</span>
+      @if (hasActiveFilters()) {
+        <button class="clear-btn" (click)="clearFilters()">
+          <mat-icon>close</mat-icon> Clear
+        </button>
+      }
+    </div>
+  </div>
+
+  <mat-card>
+    <mat-card-header><mat-card-title>Batch Performance Details</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="table-wrap">
+      <table mat-table [dataSource]="filteredBatches()" class="full-width">
+        <ng-container matColumnDef="batchNumber">
+          <th mat-header-cell *matHeaderCellDef>Batch</th>
+          <td mat-cell *matCellDef="let b"><code>{{ b.batchNumber }}</code></td>
+        </ng-container>
+        <ng-container matColumnDef="productName">
+          <th mat-header-cell *matHeaderCellDef>Product</th>
+          <td mat-cell *matCellDef="let b">{{ b.productName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let b">{{ b.productionDate | date:'mediumDate' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="expected">
+          <th mat-header-cell *matHeaderCellDef>Expected (kg)</th>
+          <td mat-cell *matCellDef="let b">{{ b.expectedWeight }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actual">
+          <th mat-header-cell *matHeaderCellDef>Actual (kg)</th>
+          <td mat-cell *matCellDef="let b">{{ b.actualWeight }}</td>
+        </ng-container>
+        <ng-container matColumnDef="yield">
+          <th mat-header-cell *matHeaderCellDef>Yield %</th>
+          <td mat-cell *matCellDef="let b">
+            <div class="yield-cell">
+              <mat-progress-bar mode="determinate" [value]="b.yieldPercentage" [color]="b.yieldPercentage >= 95 ? 'primary' : 'warn'"></mat-progress-bar>
+              <span>{{ b.yieldPercentage | number:'1.1-1' }}%</span>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="waste">
+          <th mat-header-cell *matHeaderCellDef>Waste %</th>
+          <td mat-cell *matCellDef="let b" [class.waste-high]="b.wastePercentage > 10">{{ b.wastePercentage | number:'1.1-1' }}%</td>
+        </ng-container>
+        <ng-container matColumnDef="sellingValue">
+          <th mat-header-cell *matHeaderCellDef>Selling Value</th>
+          <td mat-cell *matCellDef="let b">{{ (b.sellingValue ?? 0) | number:'1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="costValue">
+          <th mat-header-cell *matHeaderCellDef>Cost Value</th>
+          <td mat-cell *matCellDef="let b">{{ (b.costValue ?? 0) | number:'1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="profit">
+          <th mat-header-cell *matHeaderCellDef>Profit</th>
+          <td mat-cell *matCellDef="let b">
+            <span [style.color]="(b.profitValue ?? 0) >= 0 ? '#2e7d32' : '#c62828'">
+              {{ (b.profitValue ?? 0) | number:'1.2-2' }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let b">
+            <span class="badge" [class.green]="b.status === 'completed'" [class.orange]="b.status === 'pending'" [class.red]="b.status === 'failed'">
+              {{ b.status }}
+            </span>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="supplier-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>local_shipping</mat-icon>
+      <mat-card-title>Supplier Inventory Consumption</mat-card-title>
+      <mat-card-subtitle>Invoice purchases vs production consumption by supplier</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (supplierConsumption().length === 0) {
+        <div class="empty-state">
+          <mat-icon>info_outline</mat-icon>
+          <p>Add invoices and complete production batches to see supplier consumption data</p>
+        </div>
+      }
+      @for (s of supplierConsumption(); track s.supplier) {
+        <div class="supplier-block" [class.open]="expandedSupplier === s.supplier">
+          <div class="supplier-header" (click)="toggleSupplier(s.supplier)">
+            <div class="sup-left">
+              <mat-icon>business</mat-icon>
+              <span class="sup-name">{{ s.supplier }}</span>
+            </div>
+            <div class="sup-money">
+              <div class="money-pill purchased">
+                <span class="pill-label">Purchased</span>
+                <span class="pill-val">{{ s.totalPurchasedValue | number:'1.2-2' }}</span>
+              </div>
+              <div class="money-pill used">
+                <span class="pill-label">Used</span>
+                <span class="pill-val">{{ s.totalUsedValue | number:'1.2-2' }}</span>
+              </div>
+              <div class="money-pill remaining" [class.low]="s.remainingValue < s.totalPurchasedValue * 0.1">
+                <span class="pill-label">Remaining</span>
+                <span class="pill-val">{{ s.remainingValue | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div class="sup-bar">
+              <mat-progress-bar mode="determinate" [value]="s.usagePercent"
+                [color]="s.usagePercent > 90 ? 'warn' : 'primary'"></mat-progress-bar>
+              <span class="bar-label">{{ s.usagePercent | number:'1.1-1' }}% consumed</span>
+            </div>
+            <mat-icon class="chevron">{{ expandedSupplier === s.supplier ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </div>
+
+          @if (expandedSupplier === s.supplier) {
+            <div class="ing-table-wrap">
+              <table mat-table [dataSource]="s.ingredients" class="ing-mat-table">
+
+                <ng-container matColumnDef="ingredientName">
+                  <th mat-header-cell *matHeaderCellDef>Ingredient</th>
+                  <td mat-cell *matCellDef="let ing"><strong>{{ ing.ingredientName }}</strong></td>
+                  <td mat-footer-cell *matFooterCellDef><strong>Total</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="purchasedKg">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Purchased (kg)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col">{{ ing.totalPurchasedKg | number:'1.3-3' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ s.totalPurchasedKg | number:'1.3-3' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="purchasedValue">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Purchased (value)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col">{{ ing.totalPurchasedValue | number:'1.2-2' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ s.totalPurchasedValue | number:'1.2-2' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="usedKg">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Used (kg)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col">{{ ing.totalUsedKg | number:'1.3-3' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ s.totalUsedKg | number:'1.3-3' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="usedValue">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Used (value)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col used-val">{{ ing.totalUsedValue | number:'1.2-2' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col used-val"><strong>{{ s.totalUsedValue | number:'1.2-2' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="remainingKg">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Remaining (kg)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col" [class.low]="ing.remainingKg < 50">{{ ing.remainingKg | number:'1.3-3' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ s.remainingKg | number:'1.3-3' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="remainingValue">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Remaining (value)</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col remaining-val" [class.low]="ing.remainingKg < 50">{{ ing.remainingValue | number:'1.2-2' }}</td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col remaining-val"><strong>{{ s.remainingValue | number:'1.2-2' }}</strong></td>
+                </ng-container>
+
+                <ng-container matColumnDef="usagePercent">
+                  <th mat-header-cell *matHeaderCellDef class="num-col">% Used</th>
+                  <td mat-cell *matCellDef="let ing" class="num-col">
+                    <div class="mini-bar">
+                      <mat-progress-bar mode="determinate" [value]="ing.usagePercent" [color]="ing.usagePercent > 90 ? 'warn' : 'primary'"></mat-progress-bar>
+                      <span>{{ ing.usagePercent | number:'1.1-1' }}%</span>
+                    </div>
+                  </td>
+                  <td mat-footer-cell *matFooterCellDef class="num-col"><strong>{{ s.usagePercent | number:'1.1-1' }}%</strong></td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="ingColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: ingColumns;" [class.depleted]="row.remainingKg <= 0"></tr>
+                <tr mat-footer-row *matFooterRowDef="ingColumns" class="ing-footer-row"></tr>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

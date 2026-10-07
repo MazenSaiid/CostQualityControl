@@ -1,0 +1,121 @@
+<div class="cost-report">
+  <div class="page-header">
+    <div>
+      <h2>Cost &amp; Profitability Report</h2>
+      <p>Product cost breakdown and profit margin analysis</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="exportExcel()">
+        <mat-icon>table_view</mat-icon> Excel
+      </button>
+      <button mat-stroked-button color="warn" (click)="exportPdf()">
+        <mat-icon>picture_as_pdf</mat-icon> PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <mat-card class="summary-card">
+      <mat-icon>factory</mat-icon>
+      <div><span class="val">{{ totalProductionCost() | currency }}</span><span class="lbl">Total Production Cost</span></div>
+    </mat-card>
+    <mat-card class="summary-card">
+      <mat-icon>sell</mat-icon>
+      <div><span class="val">{{ totalRevenue() | currency }}</span><span class="lbl">Total Revenue (Prices)</span></div>
+    </mat-card>
+    <mat-card class="summary-card green">
+      <mat-icon>trending_up</mat-icon>
+      <div><span class="val">{{ totalProfit() | currency }}</span><span class="lbl">Total Profit</span></div>
+    </mat-card>
+    <mat-card class="summary-card blue">
+      <mat-icon>percent</mat-icon>
+      <div><span class="val">{{ avgMargin() | number:'1.1-1' }}%</span><span class="lbl">Avg Profit Margin</span></div>
+    </mat-card>
+  </div>
+
+  <mat-card class="table-card">
+    <mat-card-header><mat-card-title>Product Cost Analysis</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="table-wrap">
+      <table mat-table [dataSource]="products()" class="full-width">
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef>Code</th>
+          <td mat-cell *matCellDef="let p"><code>{{ p.code }}</code></td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Product</th>
+          <td mat-cell *matCellDef="let p"><strong>{{ p.name }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let p">{{ p.category }}</td>
+        </ng-container>
+        <ng-container matColumnDef="ingredients">
+          <th mat-header-cell *matHeaderCellDef>Ingredients</th>
+          <td mat-cell *matCellDef="let p">{{ p.ingredients.length }}</td>
+        </ng-container>
+        <ng-container matColumnDef="totalCost">
+          <th mat-header-cell *matHeaderCellDef>Batch Cost</th>
+          <td mat-cell *matCellDef="let p">{{ p.totalCost | number:'1.4-4' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="costPerKg">
+          <th mat-header-cell *matHeaderCellDef>Cost / kg</th>
+          <td mat-cell *matCellDef="let p"><strong>{{ p.costPerKg | number:'1.4-4' }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="sellingPrice">
+          <th mat-header-cell *matHeaderCellDef>Selling Price</th>
+          <td mat-cell *matCellDef="let p">{{ p.sellingPrice | currency }}</td>
+        </ng-container>
+        <ng-container matColumnDef="profit">
+          <th mat-header-cell *matHeaderCellDef>Profit</th>
+          <td mat-cell *matCellDef="let p" [class.profit-pos]="p.profitAmount > 0" [class.profit-neg]="p.profitAmount <= 0">
+            {{ p.profitAmount | currency }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="margin">
+          <th mat-header-cell *matHeaderCellDef>Margin %</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="badge" [class.green]="p.profitPercentage >= 40" [class.orange]="p.profitPercentage >= 20 && p.profitPercentage < 40" [class.red]="p.profitPercentage < 20">
+              {{ p.profitPercentage | number:'1.1-1' }}%
+            </span>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="productColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: productColumns"></tr>
+      </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="table-card">
+    <mat-card-header><mat-card-title>Ingredient Cost Summary</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <div class="table-wrap">
+      <table mat-table [dataSource]="ingredients()" class="full-width">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Ingredient</th>
+          <td mat-cell *matCellDef="let i"><strong>{{ i.name }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="unit">
+          <th mat-header-cell *matHeaderCellDef>Unit</th>
+          <td mat-cell *matCellDef="let i">{{ i.unit }}</td>
+        </ng-container>
+        <ng-container matColumnDef="cost">
+          <th mat-header-cell *matHeaderCellDef>Cost / Unit</th>
+          <td mat-cell *matCellDef="let i"><strong>{{ i.currentCost | currency }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="supplier">
+          <th mat-header-cell *matHeaderCellDef>Supplier</th>
+          <td mat-cell *matCellDef="let i">{{ i.supplierName || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="lastUpdated">
+          <th mat-header-cell *matHeaderCellDef>Last Updated</th>
+          <td mat-cell *matCellDef="let i">{{ i.lastUpdated | date:'mediumDate' }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="ingredientColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: ingredientColumns"></tr>
+      </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

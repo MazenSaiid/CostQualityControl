@@ -1,0 +1,364 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h2>Supplier Invoices</h2>
+      <p>Enter purchase invoices — ingredient costs update automatically</p>
+    </div>
+    @if (!showForm && permSvc.canWrite('Invoices')) {
+      <button mat-raised-button color="primary" (click)="openAdd()">
+        <mat-icon>add</mat-icon> New Invoice
+      </button>
+    }
+  </div>
+
+  @if (showForm) {
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>New Supplier Invoice</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form">
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Invoice Number</mat-label>
+              <input matInput formControlName="invoiceNumber" placeholder="INV-2024-001">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Supplier</mat-label>
+              <mat-select formControlName="supplierId">
+                @for (s of suppliers(); track s.id) {
+                  <mat-option [value]="s.id">{{ s.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Date</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="date">
+              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+            </mat-form-field>
+          </div>
+
+          <h4>Invoice Items</h4>
+          @for (ctrl of itemControls; track $index) {
+            <div class="item-row" [formGroup]="$any(ctrl)">
+              <mat-form-field appearance="outline">
+                <mat-label>Ingredient</mat-label>
+                <mat-select formControlName="ingredientId">
+                  @for (ing of ingredients(); track ing.id) {
+                    <mat-option [value]="ing.id">{{ ing.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="small">
+                <mat-label>Weight (kg)</mat-label>
+                <input matInput type="number" formControlName="weight" min="0.001" step="0.1">
+                <span matSuffix>&nbsp;kg</span>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="small">
+                <mat-label>Unit Price / kg</mat-label>
+                <input matInput type="number" formControlName="unitPrice" min="0" step="0.0001">
+              </mat-form-field>
+              <span class="item-total">Total: {{ getItemTotal($any(ctrl)) | number:'1.4-4' }}</span>
+              <button mat-icon-button color="warn" type="button" (click)="removeItem($index)"><mat-icon>delete</mat-icon></button>
+            </div>
+          }
+
+          <div class="item-actions">
+            <button mat-stroked-button type="button" (click)="addItem()"><mat-icon>add</mat-icon> Add Item</button>
+            <span class="total-amount">Total: <strong>{{ totalAmount() | currency }}</strong></span>
+          </div>
+
+          <div class="info-box">
+            <mat-icon>info</mat-icon>
+            <span>Saving this invoice will automatically update the cost of the affected ingredients and recalculate all product costs.</span>
+          </div>
+        </form>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button (click)="cancel()">Cancel</button>
+        <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">Save Invoice</button>
+      </mat-card-actions>
+    </mat-card>
+  }
+
+  <!-- Summary totals -->
+  <div class="summary-bar">
+    <div class="sum-pill blue">
+      <mat-icon>receipt_long</mat-icon>
+      <div><span class="sum-val">{{ totalFiltered() | number:'1.2-2' }}</span><span class="sum-lbl">Total ({{ filteredInvoices().length }} invoices)</span></div>
+    </div>
+    <div class="sum-pill green">
+      <mat-icon>check_circle</mat-icon>
+      <div><span class="sum-val">{{ totalPaid() | number:'1.2-2' }}</span><span class="sum-lbl">Paid</span></div>
+    </div>
+    <div class="sum-pill orange">
+      <mat-icon>pending_actions</mat-icon>
+      <div><span class="sum-val">{{ totalOwed() | number:'1.2-2' }}</span><span class="sum-lbl">Still Owed</span></div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <mat-icon class="label-icon">search</mat-icon>
+      <mat-form-field appearance="outline" class="slim-field search-field">
+        <input matInput placeholder="Search invoice # or supplier…" [value]="filterSearch()" (input)="filterSearch.set($any($event.target).value)">
+      </mat-form-field>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">Supplier</span>
+      <mat-form-field appearance="outline" class="slim-field">
+        <mat-select [value]="filterSupplier()" (selectionChange)="filterSupplier.set($event.value)">
+          <mat-option value="all">All suppliers</mat-option>
+          @for (s of uniqueSuppliers(); track s) {
+            <mat-option [value]="s">{{ s }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status</span>
+      <div class="chip-group">
+        <button class="chip" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">All</button>
+        <button class="chip" [class.active]="filterStatus() === 'open'" (click)="filterStatus.set('open')">Open</button>
+        <button class="chip chip-partial" [class.active]="filterStatus() === 'partial'" (click)="filterStatus.set('partial')">Partial</button>
+        <button class="chip" [class.active]="filterStatus() === 'paid'" (click)="filterStatus.set('paid')">Paid</button>
+      </div>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">From</span>
+      <mat-form-field appearance="outline" class="slim-field date-field">
+        <input matInput [matDatepicker]="dpFrom" [max]="maxDate" [value]="toDate(filterDateFrom())"
+          (dateChange)="filterDateFrom.set(toIso($event.value))" placeholder="Start date" readonly>
+        <mat-datepicker-toggle matIconSuffix [for]="dpFrom"></mat-datepicker-toggle>
+        <mat-datepicker #dpFrom></mat-datepicker>
+      </mat-form-field>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">To</span>
+      <mat-form-field appearance="outline" class="slim-field date-field">
+        <input matInput [matDatepicker]="dpTo" [max]="maxDate" [value]="toDate(filterDateTo())"
+          (dateChange)="filterDateTo.set(toIso($event.value))" placeholder="End date" readonly>
+        <mat-datepicker-toggle matIconSuffix [for]="dpTo"></mat-datepicker-toggle>
+        <mat-datepicker #dpTo></mat-datepicker>
+      </mat-form-field>
+    </div>
+    @if (hasActiveFilters()) {
+      <button class="clear-btn" (click)="clearFilters()">
+        <mat-icon>close</mat-icon> Clear
+      </button>
+    }
+  </div>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="table-wrap">
+      <table mat-table [dataSource]="filteredInvoices()" class="full-width" multiTemplateDataRows>
+        <ng-container matColumnDef="invoiceNumber">
+          <th mat-header-cell *matHeaderCellDef>Invoice #</th>
+          <td mat-cell *matCellDef="let i"><code>{{ i.invoiceNumber }}</code></td>
+        </ng-container>
+        <ng-container matColumnDef="supplierName">
+          <th mat-header-cell *matHeaderCellDef>Supplier</th>
+          <td mat-cell *matCellDef="let i">{{ i.supplierName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let i">{{ i.date | date:'mediumDate' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="items">
+          <th mat-header-cell *matHeaderCellDef>Items</th>
+          <td mat-cell *matCellDef="let i">{{ i.items.length }} item(s)</td>
+        </ng-container>
+        <ng-container matColumnDef="totalAmount">
+          <th mat-header-cell *matHeaderCellDef>Invoice Total</th>
+          <td mat-cell *matCellDef="let i"><strong>{{ i.totalAmount | number:'1.2-2' }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="totalPaid">
+          <th mat-header-cell *matHeaderCellDef>Paid</th>
+          <td mat-cell *matCellDef="let i">
+            <span class="money-paid">{{ i.totalPaid | number:'1.2-2' }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="totalDue">
+          <th mat-header-cell *matHeaderCellDef>Due</th>
+          <td mat-cell *matCellDef="let i">
+            @if (i.totalDue > 0) {
+              <span class="money-due">{{ i.totalDue | number:'1.2-2' }}</span>
+            } @else {
+              <span class="money-settled">—</span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let i">
+            <span class="status-badge"
+              [class.paid]="paymentStatus(i) === 'PAID'"
+              [class.partial]="paymentStatus(i) === 'PARTIAL'"
+              [class.open]="paymentStatus(i) === 'OPEN'">
+              {{ paymentStatus(i) }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let i">
+            <div class="action-btns">
+              <button mat-icon-button matTooltip="View details"
+                [color]="expandedInvoice?.id === i.id ? 'primary' : ''"
+                (click)="toggleDetail(i); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              @if (permSvc.canWrite('Invoices') && i.totalDue > 0) {
+                <button mat-icon-button color="accent" matTooltip="Record payment"
+                  (click)="openPayment(i, $event)">
+                  <mat-icon>payments</mat-icon>
+                </button>
+              }
+              @if (permSvc.canDelete('Invoices')) {
+                <button mat-icon-button color="warn" matTooltip="Delete" (click)="delete(i); $event.stopPropagation()">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Expanded detail row -->
+        <ng-container matColumnDef="expandedDetail">
+          <td mat-cell *matCellDef="let i" [attr.colspan]="displayedColumns.length">
+            @if (expandedInvoice?.id === i.id) {
+              <div class="detail-panel">
+                <div class="detail-header">
+                  <div class="detail-meta">
+                    <span><mat-icon>receipt</mat-icon> {{ i.invoiceNumber }}</span>
+                    <span><mat-icon>business</mat-icon> {{ i.supplierName }}</span>
+                    <span><mat-icon>calendar_today</mat-icon> {{ i.date | date:'mediumDate' }}</span>
+                  </div>
+                  <div class="detail-amounts">
+                    <span class="da-total">Total: <strong>{{ i.totalAmount | number:'1.4-4' }}</strong></span>
+                    <span class="da-paid">Paid: <strong>{{ i.totalPaid | number:'1.2-2' }}</strong></span>
+                    @if (i.totalDue > 0) {
+                      <span class="da-due">Due: <strong>{{ i.totalDue | number:'1.2-2' }}</strong></span>
+                    }
+                  </div>
+                </div>
+
+                <div class="detail-sections">
+                  <!-- Invoice items -->
+                  <div class="detail-section">
+                    <h5><mat-icon>list_alt</mat-icon> Invoice Items</h5>
+                    <table class="detail-table">
+                      <thead>
+                        <tr>
+                          <th>Ingredient</th>
+                          <th class="num">Weight (kg)</th>
+                          <th class="num">Price / kg</th>
+                          <th class="num">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of i.items; track item.id) {
+                          <tr>
+                            <td>{{ item.ingredientName }}</td>
+                            <td class="num">{{ item.weight | number:'1.3-3' }}</td>
+                            <td class="num">{{ item.unitPrice | number:'1.4-4' }}</td>
+                            <td class="num"><strong>{{ item.totalPrice | number:'1.4-4' }}</strong></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Payment history -->
+                  <div class="detail-section">
+                    <div class="payments-header">
+                      <h5><mat-icon>payments</mat-icon> Payment History</h5>
+                      @if (permSvc.canWrite('Invoices') && i.totalDue > 0) {
+                        <button mat-stroked-button color="primary" class="pay-btn" (click)="openPayment(i, $event)">
+                          <mat-icon>add</mat-icon> Record Payment
+                        </button>
+                      }
+                    </div>
+                    @if (i.payments && i.payments.length > 0) {
+                      <table class="detail-table payments-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th class="num">Amount</th>
+                            <th>Notes</th>
+                            <th>Recorded By</th>
+                            @if (permSvc.canWrite('Invoices')) { <th></th> }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of i.payments; track p.id) {
+                            <tr class="payment-row">
+                              <td>{{ p.date | date:'mediumDate' }}</td>
+                              <td class="num"><strong class="p-amount">{{ p.amount | number:'1.2-2' }}</strong></td>
+                              <td class="notes-cell">{{ p.notes || '—' }}</td>
+                              <td>{{ p.createdBy }}</td>
+                              @if (permSvc.canWrite('Invoices')) {
+                                <td>
+                                  <button mat-icon-button color="warn" class="del-payment-btn"
+                                    matTooltip="Remove payment"
+                                    (click)="deletePayment(i, p.id, $event)">
+                                    <mat-icon>remove_circle_outline</mat-icon>
+                                  </button>
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    } @else {
+                      <p class="no-payments">No payments recorded yet.</p>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Footer totals -->
+        <ng-container matColumnDef="footerLabel">
+          <td mat-footer-cell *matFooterCellDef [attr.colspan]="5" class="footer-label">
+            <strong>{{ filteredInvoices().length }} invoice(s)</strong>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="footerPaid">
+          <td mat-footer-cell *matFooterCellDef class="footer-num">
+            <span class="status-badge paid">{{ totalPaid() | number:'1.2-2' }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="footerDue">
+          <td mat-footer-cell *matFooterCellDef class="footer-num">
+            @if (totalOwed() > 0) {
+              <span class="status-badge open">{{ totalOwed() | number:'1.2-2' }}</span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="footerStatus">
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+        <ng-container matColumnDef="footerActions">
+          <td mat-footer-cell *matFooterCellDef></td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"
+          class="invoice-row"
+          [class.expanded]="expandedInvoice?.id === row.id"
+          (click)="toggleDetail(row)"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
+        <tr mat-footer-row *matFooterRowDef="['footerLabel','footerPaid','footerDue','footerStatus','footerActions']" class="footer-row"></tr>
+      </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

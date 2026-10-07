@@ -1,0 +1,78 @@
+<div class="dashboard-container" *ngIf="stats() as s">
+  <div class="kpi-grid">
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon>inventory_2</mat-icon>
+        <div class="kpi-value">{{s.totalProducts}}</div>
+        <div class="kpi-label">Products</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon>science</mat-icon>
+        <div class="kpi-value">{{s.totalIngredients}}</div>
+        <div class="kpi-label">Ingredients</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon>factory</mat-icon>
+        <div class="kpi-value">{{s.totalBatches}}</div>
+        <div class="kpi-label">Batches</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon>trending_up</mat-icon>
+        <div class="kpi-value">{{s.avgProfitMargin | number:'1.1-1'}}%</div>
+        <div class="kpi-label">Avg Profit Margin</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-card-content>
+        <mat-icon>show_chart</mat-icon>
+        <div class="kpi-value">{{s.avgYield | number:'1.1-1'}}%</div>
+        <div class="kpi-label">Avg Yield</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="tables-row">
+    <mat-card class="table-card">
+      <mat-card-header><mat-card-title>Recent Production Batches</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <div class="table-wrap">
+        <table mat-table [dataSource]="s.recentBatches">
+          <ng-container matColumnDef="batchNumber"><th mat-header-cell *matHeaderCellDef>Batch</th><td mat-cell *matCellDef="let b">{{b.batchNumber}}</td></ng-container>
+          <ng-container matColumnDef="productName"><th mat-header-cell *matHeaderCellDef>Product</th><td mat-cell *matCellDef="let b">{{b.productName}}</td></ng-container>
+          <ng-container matColumnDef="yield"><th mat-header-cell *matHeaderCellDef>Yield</th><td mat-cell *matCellDef="let b">{{b.yieldPercentage | number:'1.1-1'}}%</td></ng-container>
+          <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>Status</th><td mat-cell *matCellDef="let b"><span class="status-badge {{b.status}}">{{b.status}}</span></td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="batchColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: batchColumns;"></tr>
+        </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="table-card">
+      <mat-card-header><mat-card-title>Top Products by Margin</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <div class="table-wrap">
+        <table mat-table [dataSource]="s.topProducts">
+          <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>Product</th><td mat-cell *matCellDef="let p">{{p.name}}</td></ng-container>
+          <ng-container matColumnDef="profitPercentage"><th mat-header-cell *matHeaderCellDef>Margin</th><td mat-cell *matCellDef="let p">{{p.profitPercentage | number:'1.1-1'}}%</td></ng-container>
+          <ng-container matColumnDef="sellingPrice"><th mat-header-cell *matHeaderCellDef>Price</th><td mat-cell *matCellDef="let p">{{p.sellingPrice | currency}}</td></ng-container>
+          <ng-container matColumnDef="totalCost"><th mat-header-cell *matHeaderCellDef>Cost</th><td mat-cell *matCellDef="let p">{{p.totalCost | currency}}</td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="productColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: productColumns;"></tr>
+        </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="!stats()">
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  <p>Loading dashboard...</p>
+</div>

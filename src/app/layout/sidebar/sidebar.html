@@ -1,0 +1,30 @@
+<aside class="sidebar" [class.collapsed]="collapsed">
+  <div class="sidebar-brand">
+    <mat-icon class="brand-icon">precision_manufacturing</mat-icon>
+    @if (!collapsed) {
+      <div class="brand-text">
+        <span class="brand-name">CostQC</span>
+        <span class="brand-sub">Control System</span>
+      </div>
+    }
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.route) {
+      @if (!item.resource || permSvc.canView(item.resource)) {
+        <a class="nav-item" [routerLink]="item.route" routerLinkActive="active"
+           [matTooltip]="collapsed ? item.label : ''" matTooltipPosition="right"
+           (click)="navClick.emit()">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          @if (!collapsed) {
+            <span>{{ item.label }}</span>
+          }
+        </a>
+      }
+    }
+  </nav>
+
+  <div class="sidebar-footer" *ngIf="!collapsed">
+    <span class="version">v1.0.0</span>
+  </div>
+</aside>
