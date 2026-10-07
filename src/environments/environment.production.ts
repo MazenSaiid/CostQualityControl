@@ -1,3 +1,3 @@
 export const environment = {
-  apiUrl: 'http://costquality.runasp.net/api'
+  apiUrl: 'https://costquality.runasp.net/api'
 };
